@@ -148,7 +148,7 @@ fn get_css(emoji: &str, name: &str, skintone_variant: &Option<&str>, variant: &s
     let url: String;
     if let Some(skintone) = &skintone_variant {
         url = format!(
-            "https://raw.githubusercontent.cocam/microsoft/fluentui-emoji/refs/heads/main/assets/{}/{}/{}_{}.{}",
+            "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/{}/{}/{}_{}.{}",
             encode(name),
             format!("{}/{}", skintone, encode(variant)),
             name.to_lowercase().replace(" ", "_"),
