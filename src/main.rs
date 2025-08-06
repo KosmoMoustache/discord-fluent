@@ -1,8 +1,5 @@
 use clap::{Parser, Subcommand};
-use std::{
-    fs::{self},
-    path::Path,
-};
+use std::path::Path;
 
 mod data;
 mod generate;
