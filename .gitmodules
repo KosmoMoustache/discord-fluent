@@ -1,0 +1,9 @@
+[submodule "public/fluentui-emoji"]
+	path = public/fluentui-emoji
+	url = https://github.com/microsoft/fluentui-emoji
+[submodule "public/fluentui-emoji-animated"]
+	path = public/fluentui-emoji-animated
+	url = https://github.com/microsoft/fluentui-emoji-animated
+[submodule "public/animated-fluent-emojis"]
+	path = public/animated-fluent-emojis
+	url = https://github.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis
