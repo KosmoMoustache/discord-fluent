@@ -65,7 +65,7 @@ enum Commands {
             long = "hc",
             requires = "discord",
             value_name = "FILENAME_HC_CSS",
-            default_value = "fluent_hight_contrast.css"
+            default_value = "fluent_high_contrast.css"
         )]
         discord_filename_hc: String,
         #[arg(
