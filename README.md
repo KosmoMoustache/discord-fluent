@@ -40,6 +40,7 @@ discord-fluent generate
 
 ## Missing emojis
 
+- handshake
 - handshake with skintones
 - \* holding hands (with skintones)
 - kiss *

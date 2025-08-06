@@ -7929,14 +7929,14 @@
       "color": "public/fluentui-emoji/assets/Handshake/Color/handshake_color.svg",
       "flat": "public/fluentui-emoji/assets/Handshake/Flat/handshake_flat.svg",
       "high_contrast": "public/fluentui-emoji/assets/Handshake/High Contrast/handshake_high contrast.svg",
-      "animated": "public/fluentui-emoji-animated/assets/Handshake/animated/handshake_animated.png"
+      "animated": "public/fluentui-emoji-animated/assets/Handshake/Default/animated/handshake_animated_default.png"
     },
     "url": {
       "three_d": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Handshake/3D/handshake_3d.png",
       "color": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Handshake/Color/handshake_color.svg",
       "flat": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Handshake/Flat/handshake_flat.svg",
       "high_contrast": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Handshake/High%20Contrast/handshake_high_contrast.svg",
-      "animated": "https://media.githubusercontent.com/media/microsoft/fluentui-emoji-animated/refs/heads/main/assets/Handshake/animated/handshake_animated.png"
+      "animated": "https://media.githubusercontent.com/media/microsoft/fluentui-emoji-animated/refs/heads/main/assets/Handshake/Default/animated/handshake_animated_default.png"
     }
   },
   {
