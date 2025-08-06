@@ -83,7 +83,7 @@ fn gen_css_discord(glyphs: &Vec<Glyphs>, path: &Path, discord_filenames: Discord
         path.join("fluent_3d.css").display(),
         path.join("fluent_color.css").display(),
         path.join("fluent_flat.css").display(),
-        path.join("fluent_hight_contrast.css").display(),
+        path.join("fluent_high_contrast.css").display(),
         path.join("fluent_animated.css").display()
     );
 }
