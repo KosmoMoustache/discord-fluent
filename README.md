@@ -33,3 +33,11 @@
 
 - Clone the repo
 - Clone submodules - `git submodule update --init --recursive`
+
+## Missing emojis
+
+- handshake with skintones
+- \* holding hands (with skintones)
+- kiss *
+- couple with heart *
+- family *
