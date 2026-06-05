@@ -13,8 +13,13 @@ pub struct DiscordFilenames<'a> {
 }
 
 fn create_css_file(path: &Path, filename: &str) -> File {
-    File::create(path.join(filename))
-        .expect(format!("Failed to create CSS file {}/{}", path.display(), filename).as_ref())
+    File::create(path.join(filename)).unwrap_or_else(|_| {
+        panic!(
+            "Failed to create CSS file {}/{}",
+            path.display(),
+            filename
+        )
+    })
 }
 
 pub fn generate(
@@ -24,18 +29,20 @@ pub fn generate(
     discord_filenames: Option<DiscordFilenames>,
 ) {
     let tree_content = fs::read_to_string(tree_path)
-        .expect(format!("Failed to read {}", out_path.display()).as_ref());
+        .unwrap_or_else(|_| panic!("Failed to read {}", tree_path.display()));
     let glyphs: Vec<Glyphs> = serde_json::from_str(&tree_content)
-        .expect(format!("Failed to create {}", out_path.display()).as_ref());
+        .unwrap_or_else(|_| panic!("Failed to parse {}", tree_path.display()));
 
     gen_css_default(&glyphs, out_path);
 
-    if discord && discord_filenames.is_some() {
-        gen_css_discord(&glyphs, out_path, discord_filenames.unwrap());
+    if discord {
+        if let Some(filenames) = discord_filenames {
+            gen_css_discord(&glyphs, out_path, filenames);
+        }
     }
 }
 
-fn gen_css_default(glyphs: &Vec<Glyphs>, path: &Path) {
+fn gen_css_default(glyphs: &[Glyphs], path: &Path) {
     let mut file = create_css_file(path, "fluent_default.css");
 
     for _glyph in glyphs {
@@ -47,7 +54,7 @@ fn gen_css_default(glyphs: &Vec<Glyphs>, path: &Path) {
     println!("CSS generated at {:?}", path.join("fluent_default.css"));
 }
 
-fn gen_css_discord(glyphs: &Vec<Glyphs>, path: &Path, discord_filenames: DiscordFilenames) {
+fn gen_css_discord(glyphs: &[Glyphs], path: &Path, discord_filenames: DiscordFilenames) {
     fn _write_css(file: &mut File, glyph: &str, url: Option<&String>) {
         if let Some(u) = url {
             file.write_all(
@@ -80,10 +87,10 @@ fn gen_css_discord(glyphs: &Vec<Glyphs>, path: &Path, discord_filenames: Discord
 
     println!(
         "CSS generated at: {}, {}, {}, {}, {}",
-        path.join("fluent_3d.css").display(),
-        path.join("fluent_color.css").display(),
-        path.join("fluent_flat.css").display(),
-        path.join("fluent_high_contrast.css").display(),
-        path.join("fluent_animated.css").display()
+        path.join(discord_filenames.three_d).display(),
+        path.join(discord_filenames.color).display(),
+        path.join(discord_filenames.flat).display(),
+        path.join(discord_filenames.hc).display(),
+        path.join(discord_filenames.animated).display()
     );
 }

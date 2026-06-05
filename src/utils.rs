@@ -13,8 +13,6 @@ pub struct FluentUi {
 #[derive(Debug)]
 pub struct FluentUiAnimated {
     pub path: Option<String>,
-    pub skintone: Option<Skintone>,
-    pub glyph_name: Option<String>,
 }
 
 // emoji name fixes: looked up value -> corrected value
@@ -74,12 +72,14 @@ pub fn glyph_name_correction(name: &str) -> String {
         .unwrap_or_else(|| name.to_string())
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum EmojiVariant {
     ThreeD,
     Color,
     Flat,
     HighContrast,
 }
+
 impl EmojiVariant {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -89,12 +89,22 @@ impl EmojiVariant {
             EmojiVariant::HighContrast => "High Contrast",
         }
     }
-    pub fn as_snake_case(&self) -> String {
-        self.as_str().replace(' ', "_")
+
+    pub fn as_path_segment(&self) -> &'static str {
+        self.as_str()
+    }
+
+    pub fn as_file_suffix(&self) -> &'static str {
+        match self {
+            EmojiVariant::ThreeD => "3d",
+            EmojiVariant::Color => "color",
+            EmojiVariant::Flat => "flat",
+            EmojiVariant::HighContrast => "high_contrast",
+        }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Skintone {
     Default,
     Light,
@@ -103,6 +113,7 @@ pub enum Skintone {
     MediumDark,
     Dark,
 }
+
 impl Skintone {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -112,6 +123,17 @@ impl Skintone {
             Skintone::Medium => "Medium",
             Skintone::MediumDark => "Medium-Dark",
             Skintone::Dark => "Dark",
+        }
+    }
+
+    pub fn as_path_segment(&self) -> &'static str {
+        self.as_str()
+    }
+
+    pub fn as_file_suffix(&self) -> String {
+        match self {
+            Skintone::Default => "".to_string(),
+            _ => self.as_str().to_lowercase(),
         }
     }
 
@@ -137,37 +159,33 @@ pub fn path_exist(path: &str) -> Result<String, String> {
 }
 
 pub fn parse_glyph_name(name: &str) -> (String, Option<String>) {
-    // Remove non-ASCII characters
-    let name_ascii: String = name.chars().filter(|c| c.is_ascii()).collect();
-    // Split by colon (used for skintones
-    let (name_part, skintone) =
-        if let Some((before_colon, after_colon)) = name_ascii.split_once(':') {
-            // there is a space after colon (mainly an exection for keycap: [0..10]|*|#)
-            if after_colon.chars().count() > 3 {
-                (before_colon.trim(), Some(after_colon.trim().to_string()))
-            } else {
-                (name_ascii.trim(), None)
-            }
+    // Split by colon (used for skintones)
+    let (name_part, skintone) = if let Some((before_colon, after_colon)) = name.split_once(':') {
+        // there is a space after colon (mainly an exection for keycap: [0..10]|*|#)
+        if after_colon.split_whitespace().count() >= 3 {
+            (before_colon.trim(), Some(after_colon.trim().to_string()))
         } else {
-            (name_ascii.trim(), None)
-        };
+            (name.trim(), None)
+        }
+    } else {
+        (name.trim(), None)
+    };
 
     // Make the first character uppercase and the rest lowercase
     let name_corr = name_part.chars().next().map_or(String::new(), |f| {
         f.to_uppercase().collect::<String>() + &name_part[1..].to_lowercase()
     });
 
-    return (name_corr, skintone);
+    (name_corr, skintone)
 }
 
 pub fn get_glyph_path(skintone: &Option<Skintone>, glyphs_dir: &Path, name: &str) -> String {
-    format!(
-        "{}/{}{}",
-        glyphs_dir.to_str().unwrap(),
-        name,
-        skintone
-            .as_ref()
-            .map(|s| format!("/{}", s.as_str()))
-            .unwrap_or_default()
-    )
+    let mut path = glyphs_dir.to_path_buf();
+    path.push(name);
+    if let Some(s) = skintone {
+        if *s != Skintone::Default {
+            path.push(s.as_path_segment());
+        }
+    }
+    path.to_str().unwrap().to_string()
 }
