@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -67,7 +66,7 @@ pub fn create_glyph_data(
             continue;
         }
         // Example line: 1F3C3 1F3FB ; fully-qualified # 🏃🏻 E1.0 person running: light skin tone
-        if let Some((codepoints, rest)) = line.split_once(";") {
+        if let Some((codepoints, rest)) = line.split_once(';') {
             let codepoints = codepoints.trim();
             if let Some((status, after_hash)) = rest.split_once('#') {
                 let status = status.trim(); // e.g. "fully-qualified"
@@ -85,20 +84,15 @@ pub fn create_glyph_data(
 
                 let unicode = codepoints.split_whitespace().collect::<Vec<_>>().join(" ");
 
-                // ! DEBUG
-                // if !glyph_name.contains("waving") && !glyph_name.contains("triangle") {
-                //     continue;
-                // }
-
                 let fluentui_emoji = get_fluentui_emoji(&glyph_name, normal_fluent);
                 let fluent_ui_animated = get_animated_fluentui_emoji(&glyph_name, animated_fluent);
 
-                if let Some(glyph_name_corr) = fluentui_emoji.glyph_name {
+                if let Some(glyph_name_corr) = fluentui_emoji.glyph_name.as_ref() {
                     let should_insert = if let Some(last) = glyphs.last() {
-                        let last_name = last.glyph_name.clone();
-                        let last_status = last.status.clone();
+                        let last_name = &last.glyph_name;
+                        let last_status = &last.status;
                         // don't insert if: glyph has the same name as the last and last glyph is fully-qualified
-                        !(last_name == glyph_name && last_status == "fully-qualified")
+                        !(last_name == &glyph_name && last_status == "fully-qualified")
                     } else {
                         true
                     };
@@ -106,8 +100,8 @@ pub fn create_glyph_data(
                     if should_insert {
                         let dj = Glyphs {
                             glyph: glyph.to_string(),
-                            glyph_name: glyph_name,
-                            unicode: unicode,
+                            glyph_name,
+                            unicode,
                             status: status.to_string(),
                             path: GlyphURI {
                                 three_d: fluentui_emoji.path_3d.clone(),
@@ -117,50 +111,25 @@ pub fn create_glyph_data(
                                 animated: fluent_ui_animated.path.clone(),
                             },
                             url: GlyphURI {
-                                three_d: if fluentui_emoji.path_3d.is_some() {
-                                    Some(format_url(
-                                        glyph_name_corr.as_ref(),
-                                        EmojiVariant::ThreeD,
-                                        fluentui_emoji.skintone.as_ref(),
-                                    ))
-                                } else {
-                                    None
-                                },
-                                color: if fluentui_emoji.path_color.is_some() {
-                                    Some(format_url(
-                                        glyph_name_corr.as_ref(),
-                                        EmojiVariant::Color,
-                                        fluentui_emoji.skintone.as_ref(),
-                                    ))
-                                } else {
-                                    None
-                                },
-                                flat: if fluentui_emoji.path_flat.is_some() {
-                                    Some(format_url(
-                                        glyph_name_corr.as_ref(),
-                                        EmojiVariant::Flat,
-                                        fluentui_emoji.skintone.as_ref(),
-                                    ))
-                                } else {
-                                    None
-                                },
-                                high_contrast: if fluentui_emoji.path_high_contrast.is_some() {
-                                    Some(format_url(
-                                        glyph_name_corr.as_ref(),
-                                        EmojiVariant::HighContrast,
-                                        fluentui_emoji.skintone.as_ref(),
-                                    ))
-                                } else {
-                                    None
-                                },
-                                animated: if fluent_ui_animated.path.is_some() {
-                                    Some(format_url_animated(
-                                        fluent_ui_animated.glyph_name.unwrap().as_ref(),
-                                        fluentui_emoji.skintone.as_ref(),
-                                    ))
-                                } else {
-                                    None
-                                },
+                                three_d: fluentui_emoji
+                                    .path_3d
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                color: fluentui_emoji
+                                    .path_color
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                flat: fluentui_emoji
+                                    .path_flat
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                high_contrast: fluentui_emoji
+                                    .path_high_contrast
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                animated: fluent_ui_animated.path.as_ref().and_then(|p| {
+                                    format_url_animated_from_path(glyph_name_corr, p)
+                                }),
                             },
                         };
                         glyphs.push(dj)
@@ -180,167 +149,215 @@ pub fn create_glyph_data(
     }
     let json = serde_json::to_string_pretty(&glyphs).unwrap();
     let mut file =
-        File::create(&path).expect(format!("Failed to create {}", path.display()).as_ref());
+        File::create(path).unwrap_or_else(|_| panic!("Failed to create {}", path.display()));
     file.write_all(json.as_bytes())
-        .expect(format!("Failed to wirte {}", path.display()).as_ref());
+        .unwrap_or_else(|_| panic!("Failed to write {}", path.display()));
     println!("generated at {:?} with {} glyphs", path, glyphs.len());
 }
 
-pub fn format_url(name: &str, variant: EmojiVariant, skintone: Option<&Skintone>) -> String {
-    return format!(
-        //   https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/{name}/{skintone/variant}/{name}_{variant/skintone}.{ext}",
-            "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/{}/{}/{}_{}.{}",
-            encode(name),
-            skintone.as_ref().map_or(format!("{}", encode(variant.as_str())), |s| format!("{}/{}", s.as_str(), encode(variant.as_str()))),
-            name.to_lowercase().replace(" ", "_"),
-            skintone.as_ref().map_or(
-                format!("{}", encode(variant.as_snake_case().to_lowercase().as_ref())),
-                |skintone| format!("{}_{}", encode(variant.as_snake_case().to_lowercase().as_ref()), skintone.as_str().to_lowercase())
-            ),
-            if matches!(variant, EmojiVariant::ThreeD) { "png" } else { "svg" }
-        );
-}
-pub fn format_url_animated(name: &str, skintone: Option<&Skintone>) -> String {
-    return format!(
-    //   https://media.githubusercontent.com/media/microsoft/fluentui-emoji-animated/refs/heads/main/assets/{name}{skintone}/animated/{name}_animated{_skintone}.png
-        "https://media.githubusercontent.com/media/microsoft/fluentui-emoji-animated/refs/heads/main/assets/{}{}/animated/{}_animated{}.png",
+pub fn format_url_from_path(name: &str, path: &str) -> Option<String> {
+    let p = Path::new(path);
+    let filename = p.file_name()?.to_str()?;
+    let parent = p.parent()?;
+    let variant_segment = parent.file_name()?.to_str()?;
+    let parent_parent = parent.parent()?;
+    let skintone_or_name = parent_parent.file_name()?.to_str()?;
+
+    let path_part = if skintone_or_name == name {
+        encode(variant_segment).to_string()
+    } else {
+        format!("{}/{}", encode(skintone_or_name), encode(variant_segment))
+    };
+
+    Some(format!(
+        "https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/{}/{}/{}",
         encode(name),
-        skintone.as_ref().map_or("".to_string(), |s| format!("/{}", s.as_str())),
-        name.to_lowercase().replace(" ", "_"),
-        skintone.as_ref().map_or("".to_string(), |s| format!("_{}", s.as_str().to_lowercase())),
-    );
+        path_part,
+        encode(filename)
+    ))
+}
+
+pub fn format_url_animated_from_path(name: &str, path: &str) -> Option<String> {
+    let p = Path::new(path);
+    let filename = p.file_name()?.to_str()?;
+    let parent = p.parent()?;
+    // parent is "animated"
+    let parent_parent = parent.parent()?;
+    let skintone_or_name = parent_parent.file_name()?.to_str()?;
+
+    let skintone_path = if skintone_or_name == name {
+        "".to_string()
+    } else {
+        format!("{}/", encode(skintone_or_name))
+    };
+
+    Some(format!(
+        "https://media.githubusercontent.com/media/microsoft/fluentui-emoji-animated/refs/heads/main/assets/{}/{}animated/{}",
+        encode(name),
+        skintone_path,
+        encode(filename)
+    ))
 }
 
 fn get_fluentui_emoji(name: &str, glyphs_dir: &Path) -> FluentUi {
-    fn _format_filename(
-        variant: EmojiVariant,
-        path: &String,
-        name: &str,
-        skintone: Option<&Skintone>,
-    ) -> Option<String> {
-        return Some(format!(
-            "{}/{}_{}{}.{}",
-            path,
-            name.to_lowercase().replace(" ", "_"),
-            variant.as_str().to_lowercase(),
-            if skintone.is_some() {
-                format!("_{}", skintone.unwrap().as_str().to_lowercase())
-            } else {
-                "".to_string()
-            },
-            if matches!(variant, EmojiVariant::ThreeD) {
-                "png"
-            } else {
-                "svg"
-            }
-        ));
-    }
-    pub fn _update_variant_path(t: &&str, result: &mut FluentUi, path: &String, name: &str) {
-        match *t {
-            "3D" => {
-                result.path_3d =
-                    _format_filename(EmojiVariant::ThreeD, &path, &name, result.skintone.as_ref());
-            }
-            "Color" => {
-                result.path_color =
-                    _format_filename(EmojiVariant::Color, &path, &name, result.skintone.as_ref());
-            }
-            "Flat" => {
-                result.path_flat =
-                    _format_filename(EmojiVariant::Flat, &path, &name, result.skintone.as_ref());
-            }
-            "High Contrast" => {
-                result.path_high_contrast = _format_filename(
-                    EmojiVariant::HighContrast,
-                    &path,
-                    &name,
-                    result.skintone.as_ref(),
-                );
-            }
-            _ => {}
-        }
-    }
-
-    let (p_name, skintone) = parse_glyph_name(name);
+    let (p_name, skintone_str) = parse_glyph_name(name);
     let c_name = glyph_name_correction(&p_name);
-    let skintone: Option<Skintone> = skintone
-        .as_ref()
-        .map(|s| Some(Skintone::from_str(s)))
-        .unwrap_or(None);
-    let glyph_path = get_glyph_path(&skintone, &glyphs_dir, &c_name);
+    let skintone = skintone_str.map(|s| Skintone::from_str(&s));
 
     let mut result = FluentUi {
         path_3d: None,
         path_color: None,
         path_flat: None,
         path_high_contrast: None,
-        skintone: skintone,
-        glyph_name: Some(c_name.to_string()),
+        skintone,
+        glyph_name: Some(c_name.clone()),
     };
 
-    let variants = ["3D", "Color", "Flat", "High Contrast"];
-    for variant in &variants {
-        let type_path = format!("{}/{}", glyph_path, variant);
-        if fs::metadata(&type_path).is_ok() {
-            _update_variant_path(variant, &mut result, &type_path, name);
-        } else {
-            // Default skintone
-            let default_path = format!("{}/Default/{}", glyph_path, variant);
-            if fs::metadata(&default_path).is_ok() {
-                result.skintone = Some(Skintone::Default);
-                _update_variant_path(variant, &mut result, &default_path, name);
+    let variants = [
+        EmojiVariant::ThreeD,
+        EmojiVariant::Color,
+        EmojiVariant::Flat,
+        EmojiVariant::HighContrast,
+    ];
+
+    for variant in variants {
+        let (found_path, found_skintone) = find_asset_path(glyphs_dir, &c_name, skintone, variant);
+        if let Some(path) = found_path {
+            match variant {
+                EmojiVariant::ThreeD => result.path_3d = Some(path),
+                EmojiVariant::Color => result.path_color = Some(path),
+                EmojiVariant::Flat => result.path_flat = Some(path),
+                EmojiVariant::HighContrast => result.path_high_contrast = Some(path),
+            }
+            if result.skintone.is_none() || result.skintone == Some(Skintone::Default) {
+                result.skintone = found_skintone;
             }
         }
     }
+
     result
 }
 
 fn get_animated_fluentui_emoji(name: &str, glyphs_dir: &Path) -> FluentUiAnimated {
-    let (p_name, skintone) = parse_glyph_name(name);
+    let (p_name, skintone_str) = parse_glyph_name(name);
     let c_name = glyph_name_correction(&p_name);
-    let skintone: Option<Skintone> = skintone
-        .as_ref()
-        .map(|s| Some(Skintone::from_str(s)))
-        .unwrap_or(None);
-    let glyph_path = get_glyph_path(&skintone, &glyphs_dir, &c_name);
+    let skintone = skintone_str.map(|s| Skintone::from_str(&s));
 
-    let mut result: FluentUiAnimated = FluentUiAnimated {
-        path: None,
-        skintone: skintone,
-        glyph_name: Some(c_name.to_string()),
+    let (path, _found_skintone) = find_animated_asset_path(glyphs_dir, &c_name, skintone);
+
+    FluentUiAnimated { path }
+}
+
+fn find_asset_path(
+    glyphs_dir: &Path,
+    c_name: &str,
+    skintone: Option<Skintone>,
+    variant: EmojiVariant,
+) -> (Option<String>, Option<Skintone>) {
+    let mut check_skintones = match skintone {
+        Some(s) if s != Skintone::Default => vec![Some(s), Some(Skintone::Default)],
+        _ => vec![Some(Skintone::Default)],
     };
+    check_skintones.push(None);
 
-    let check_types = ["animated"];
-    for t in &check_types {
-        let type_path = format!("{}/{}", glyph_path, t);
-        if fs::metadata(&type_path).is_ok() {
-            match *t {
-                "animated" => {
-                    result.path = Some(format!(
-                        "{}/{}_animated.png",
-                        type_path.clone(),
-                        c_name.to_lowercase().replace(" ", "_")
-                    ))
-                }
-                _ => {}
-            }
-        } else {
-            // get default skintone
-            let default_path = format!("{}/Default/{}", glyph_path, t);
-            if fs::metadata(&default_path).is_ok() {
-                result.skintone = Some(Skintone::Default);
-                match *t {
-                    "animated" => {
-                        result.path = Some(format!(
-                            "{}/{}_animated.png",
-                            type_path.clone(),
-                            c_name.to_lowercase().replace(" ", "_")
-                        ))
+    for s in check_skintones {
+        let glyph_path = get_glyph_path(&s, glyphs_dir, c_name);
+        // Try both [glyph_path]/[variant] and [glyph_path]/Default/[variant]
+        let paths_to_try = vec![
+            Path::new(&glyph_path).join(variant.as_path_segment()),
+            Path::new(&glyph_path)
+                .join("Default")
+                .join(variant.as_path_segment()),
+        ];
+
+        for variant_path in paths_to_try {
+            if variant_path.is_dir() {
+                let base_name = c_name.to_lowercase().replace(' ', "_");
+                let variant_suffix = variant.as_file_suffix();
+                let skintone_suffix = s.map_or("".to_string(), |st| {
+                    if st == Skintone::Default {
+                        "".to_string()
+                    } else {
+                        format!("_{}", st.as_file_suffix())
                     }
-                    _ => {}
+                });
+
+                let extension = if matches!(variant, EmojiVariant::ThreeD) {
+                    "png"
+                } else {
+                    "svg"
+                };
+                let filenames = vec![
+                    format!(
+                        "{}_{}{}.{}",
+                        base_name, variant_suffix, skintone_suffix, extension
+                    ),
+                    format!("{}_{}.{}", base_name, variant_suffix, extension),
+                ];
+
+                for filename in filenames {
+                    let full_path = variant_path.join(filename);
+                    if full_path.exists() {
+                        return (Some(full_path.to_str().unwrap().to_string()), s);
+                    }
                 }
             }
         }
     }
-    result
+
+    (None, None)
+}
+
+fn find_animated_asset_path(
+    glyphs_dir: &Path,
+    c_name: &str,
+    skintone: Option<Skintone>,
+) -> (Option<String>, Option<Skintone>) {
+    let mut check_skintones = match skintone {
+        Some(s) if s != Skintone::Default => vec![Some(s), Some(Skintone::Default)],
+        _ => vec![Some(Skintone::Default)],
+    };
+    check_skintones.push(None);
+
+    for s in check_skintones {
+        let glyph_path = get_glyph_path(&s, glyphs_dir, c_name);
+        // Try multiple path patterns:
+        // 1. [glyph_path]/animated
+        // 2. [glyph_path]/Default/animated
+        // 3. [glyphs_dir]/[c_name]/animated (ignoring skintone in path)
+        // 4. [glyphs_dir]/[c_name]/Default/animated
+        let paths_to_try = vec![
+            Path::new(&glyph_path).join("animated"),
+            Path::new(&glyph_path).join("Default").join("animated"),
+            glyphs_dir.join(c_name).join("animated"),
+            glyphs_dir.join(c_name).join("Default").join("animated"),
+        ];
+
+        for animated_path in paths_to_try {
+            if animated_path.is_dir() {
+                let base_name = c_name.to_lowercase().replace(' ', "_");
+                let skintone_suffix = s.map_or("".to_string(), |st| {
+                    if st == Skintone::Default {
+                        "".to_string()
+                    } else {
+                        format!("_{}", st.as_file_suffix())
+                    }
+                });
+
+                let filenames = vec![
+                    format!("{}_animated{}.png", base_name, skintone_suffix),
+                    format!("{}_animated.png", base_name),
+                ];
+
+                for filename in filenames {
+                    let full_path = animated_path.join(filename);
+                    if full_path.exists() {
+                        return (Some(full_path.to_str().unwrap().to_string()), s);
+                    }
+                }
+            }
+        }
+    }
+
+    (None, None)
 }
