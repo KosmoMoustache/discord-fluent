@@ -13,13 +13,8 @@ pub struct DiscordFilenames<'a> {
 }
 
 fn create_css_file(path: &Path, filename: &str) -> File {
-    File::create(path.join(filename)).unwrap_or_else(|_| {
-        panic!(
-            "Failed to create CSS file {}/{}",
-            path.display(),
-            filename
-        )
-    })
+    File::create(path.join(filename))
+        .unwrap_or_else(|_| panic!("Failed to create CSS file {}/{}", path.display(), filename))
 }
 
 pub fn generate(

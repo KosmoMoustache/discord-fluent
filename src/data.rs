@@ -111,18 +111,22 @@ pub fn create_glyph_data(
                                 animated: fluent_ui_animated.path.clone(),
                             },
                             url: GlyphURI {
-                                three_d: fluentui_emoji.path_3d.as_ref().and_then(|p| {
-                                    format_url_from_path(glyph_name_corr, p)
-                                }),
-                                color: fluentui_emoji.path_color.as_ref().and_then(|p| {
-                                    format_url_from_path(glyph_name_corr, p)
-                                }),
-                                flat: fluentui_emoji.path_flat.as_ref().and_then(|p| {
-                                    format_url_from_path(glyph_name_corr, p)
-                                }),
-                                high_contrast: fluentui_emoji.path_high_contrast.as_ref().and_then(|p| {
-                                    format_url_from_path(glyph_name_corr, p)
-                                }),
+                                three_d: fluentui_emoji
+                                    .path_3d
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                color: fluentui_emoji
+                                    .path_color
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                flat: fluentui_emoji
+                                    .path_flat
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
+                                high_contrast: fluentui_emoji
+                                    .path_high_contrast
+                                    .as_ref()
+                                    .and_then(|p| format_url_from_path(glyph_name_corr, p)),
                                 animated: fluent_ui_animated.path.as_ref().and_then(|p| {
                                     format_url_animated_from_path(glyph_name_corr, p)
                                 }),
@@ -261,7 +265,9 @@ fn find_asset_path(
         // Try both [glyph_path]/[variant] and [glyph_path]/Default/[variant]
         let paths_to_try = vec![
             Path::new(&glyph_path).join(variant.as_path_segment()),
-            Path::new(&glyph_path).join("Default").join(variant.as_path_segment()),
+            Path::new(&glyph_path)
+                .join("Default")
+                .join(variant.as_path_segment()),
         ];
 
         for variant_path in paths_to_try {
@@ -282,7 +288,10 @@ fn find_asset_path(
                     "svg"
                 };
                 let filenames = vec![
-                    format!("{}_{}{}.{}", base_name, variant_suffix, skintone_suffix, extension),
+                    format!(
+                        "{}_{}{}.{}",
+                        base_name, variant_suffix, skintone_suffix, extension
+                    ),
                     format!("{}_{}.{}", base_name, variant_suffix, extension),
                 ];
 
